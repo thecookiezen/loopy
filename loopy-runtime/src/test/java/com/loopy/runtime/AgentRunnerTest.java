@@ -156,7 +156,7 @@ class AgentRunnerTest {
     }
 
     @Test
-    void run_singleUse_throwsOnSecondCall() {
+    void run_singleUse_returnsRejectedOnSecondCall() {
         var agent = simpleAgent();
         var goal = agent.goals().iterator().next();
         var mailbox = ImmutableMailbox.empty().post(new Input("x"));
@@ -165,11 +165,12 @@ class AgentRunnerTest {
         runner.run(agent, goal, mailbox, llm, ToolRegistry.empty(),
                 new GoapPlanner(), new DefaultBeliefDeriver(), options);
 
-        assertThatIllegalStateException()
-                .isThrownBy(() -> runner.run(agent, goal, mailbox, llm,
-                        ToolRegistry.empty(), new GoapPlanner(),
-                        new DefaultBeliefDeriver(), options))
-                .withMessageContaining("single-use");
+        var secondRun = runner.run(agent, goal, mailbox, llm,
+                ToolRegistry.empty(), new GoapPlanner(),
+                new DefaultBeliefDeriver(), options);
+
+        assertThat(secondRun).isInstanceOf(AgentExecution.Rejected.class);
+        assertThat(((AgentExecution.Rejected) secondRun).reason()).contains("single-use");
     }
 
     private static class StubLlmClient implements LlmClient {

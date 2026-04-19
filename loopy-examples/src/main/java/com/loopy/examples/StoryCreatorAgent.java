@@ -130,6 +130,8 @@ public final class StoryCreatorAgent {
                 LOG.warn("Agent got stuck: {}", stuck.reason());
             case AgentExecution.Failed failed ->
                 LOG.error("Agent failed", failed.cause());
+            case AgentExecution.Rejected rejected ->
+                LOG.error("Agent run rejected: {}", rejected.reason());
         }
     }
 }

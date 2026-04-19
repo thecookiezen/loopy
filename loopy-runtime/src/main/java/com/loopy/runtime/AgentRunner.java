@@ -56,7 +56,6 @@ public final class AgentRunner {
     /**
      * Run an agent to completion using the OODA loop with action supervision.
      *
-     * @throws IllegalStateException if called more than once on the same instance
      */
     public AgentExecution run(
             AgentDefinition agent,
@@ -68,7 +67,7 @@ public final class AgentRunner {
             BeliefDeriver beliefDeriver,
             RunOptions options) {
         if (executed) {
-            throw new IllegalStateException(
+            return new AgentExecution.Rejected(
                     "AgentRunner is single-use - create a new instance for each run");
         }
         executed = true;
@@ -119,11 +118,17 @@ public final class AgentRunner {
 
             // DECIDE: pick first action
             var nextActionDef = plan.nextStep();
-            var binding = agent.actions().stream()
+            var bindingOpt = agent.actions().stream()
                     .filter(b -> b.definition().equals(nextActionDef))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalStateException(
-                            "No binding found for action: " + nextActionDef.name()));
+                    .findFirst();
+
+            if (bindingOpt.isEmpty()) {
+                var trace = buildTrace(start, options);
+                return new AgentExecution.Failed(
+                        new IllegalStateException("No binding found for action: " + nextActionDef.name()),
+                        trace);
+            }
+            var binding = bindingOpt.get();
 
             // ACT: execute on virtual thread
             emit(new AgentLifecycleEvent.ActionStarted(nextActionDef, mailbox, Instant.now()));

@@ -35,4 +35,7 @@ public sealed interface AgentExecution {
      */
     record Failed(Exception cause, ExecutionTrace trace) implements AgentExecution {
     }
+
+    record Rejected(String reason) implements AgentExecution {
+    }
 }
