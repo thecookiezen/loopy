@@ -5,23 +5,23 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
 
-class ConcurrentMailboxTest {
+class InMemoryMailboxTest {
 
     @Test
     void empty_hasNoMessages() {
-        assertThat(ConcurrentMailbox.empty().messages()).isEmpty();
+        assertThat(InMemoryMailbox.empty().messages()).isEmpty();
     }
 
     @Test
     void post_addsMessage() {
-        var mb = ConcurrentMailbox.empty();
+        var mb = InMemoryMailbox.empty();
         mb.post("hello");
         assertThat(mb.messages()).containsExactly("hello");
     }
 
     @Test
     void last_returnsLatestOfType() {
-        var mb = ConcurrentMailbox.empty();
+        var mb = InMemoryMailbox.empty();
         mb.post("first");
         mb.post(42);
         mb.post("second");
@@ -31,14 +31,14 @@ class ConcurrentMailboxTest {
 
     @Test
     void last_emptyWhenTypeNotFound() {
-        var mb = ConcurrentMailbox.empty();
+        var mb = InMemoryMailbox.empty();
         mb.post("hello");
         assertThat(mb.last(TypeToken.of(Integer.class))).isEmpty();
     }
 
     @Test
     void allOfType_returnsAllMatching() {
-        var mb = ConcurrentMailbox.empty();
+        var mb = InMemoryMailbox.empty();
         mb.post("a");
         mb.post(1);
         mb.post("b");
@@ -47,7 +47,7 @@ class ConcurrentMailboxTest {
 
     @Test
     void bind_makesNamedRetrievable() {
-        var mb = ConcurrentMailbox.empty();
+        var mb = InMemoryMailbox.empty();
         mb.bind("key", "value");
         assertThat(mb.get("key", TypeToken.of(String.class))).contains("value");
         assertThat(mb.messages()).contains("value");
@@ -56,13 +56,13 @@ class ConcurrentMailboxTest {
     @Test
     void from_copiesFromOtherMailbox() {
         var immutable = ImmutableMailbox.empty().post("hello").post(42);
-        var concurrent = ConcurrentMailbox.from(immutable);
-        assertThat(concurrent.messages()).containsExactly("hello", 42);
+        var inMemory = InMemoryMailbox.from(immutable);
+        assertThat(inMemory.messages()).containsExactly("hello", 42);
     }
 
     @Test
     void messages_returnsSnapshot() {
-        var mb = ConcurrentMailbox.empty();
+        var mb = InMemoryMailbox.empty();
         mb.post("a");
         var snapshot = mb.messages();
         mb.post("b");

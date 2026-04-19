@@ -6,7 +6,7 @@ import com.loopy.core.action.ActionContext;
 import com.loopy.core.action.ActionDefinition;
 import com.loopy.core.action.ActionResult;
 import com.loopy.core.agent.*;
-import com.loopy.core.mailbox.ConcurrentMailbox;
+import com.loopy.core.mailbox.InMemoryMailbox;
 import com.loopy.core.mailbox.Mailbox;
 import com.loopy.core.planning.BeliefDeriver;
 import com.loopy.core.planning.Planner;
@@ -74,7 +74,7 @@ public final class AgentRunner {
         executed = true;
 
         var start = Instant.now();
-        var mailbox = ConcurrentMailbox.from(initialState);
+        var mailbox = InMemoryMailbox.from(initialState);
 
         emit(new AgentLifecycleEvent.Started(agentId, agent, goal, Instant.now()));
 

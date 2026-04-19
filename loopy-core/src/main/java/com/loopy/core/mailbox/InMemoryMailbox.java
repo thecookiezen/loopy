@@ -9,34 +9,34 @@ import com.loopy.core.TypeToken;
 /**
  * Mutable Mailbox for use during agent execution.
  */
-public final class ConcurrentMailbox implements Mailbox {
+public final class InMemoryMailbox implements Mailbox {
 
     private final CopyOnWriteArrayList<Object> entries;
     private final ConcurrentHashMap<String, Object> named;
 
-    private ConcurrentMailbox(List<Object> entries, Map<String, Object> named) {
+    private InMemoryMailbox(List<Object> entries, Map<String, Object> named) {
         this.entries = new CopyOnWriteArrayList<>(entries);
         this.named = new ConcurrentHashMap<>(named);
     }
 
     /**
-     * Creates an empty concurrent mailbox.
+     * Creates an empty in-memory mailbox.
      *
-     * @return an empty concurrent mailbox
+     * @return an empty in-memory mailbox
      */
-    public static ConcurrentMailbox empty() {
-        return new ConcurrentMailbox(List.of(), Map.of());
+    public static InMemoryMailbox empty() {
+        return new InMemoryMailbox(List.of(), Map.of());
     }
 
     /**
-     * Creates a concurrent mailbox from an existing mailbox.
+     * Creates an in-memory mailbox from an existing mailbox.
      * Copies all messages from the source mailbox.
      *
      * @param other the mailbox to copy from
-     * @return a new concurrent mailbox with the same messages
+     * @return a new in-memory mailbox with the same messages
      */
-    public static ConcurrentMailbox from(Mailbox other) {
-        return new ConcurrentMailbox(other.messages(), Map.of());
+    public static InMemoryMailbox from(Mailbox other) {
+        return new InMemoryMailbox(other.messages(), Map.of());
     }
 
     @Override

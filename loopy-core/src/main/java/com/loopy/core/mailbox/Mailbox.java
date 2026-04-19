@@ -13,7 +13,7 @@ import com.loopy.core.planning.BeliefDeriver;
  * The Mailbox is a message store. Planning-layer concerns (condition flags,
  * belief derivation) are handled by {@link BeliefDeriver}.
  */
-public sealed interface Mailbox permits ImmutableMailbox, ConcurrentMailbox {
+public sealed interface Mailbox permits ImmutableMailbox, InMemoryMailbox {
 
     /**
      * Get the last message of a specific type.
