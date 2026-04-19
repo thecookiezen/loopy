@@ -538,7 +538,3 @@ var quickResult = runner.run(agent, summaryGoal, initial, llm,
 ```bash
 mvn test
 ```
-
-## License
-
-Private - all rights reserved.
