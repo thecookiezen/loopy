@@ -1,18 +1,15 @@
 # Loopy
 
-A framework-free, functional agent framework for Java 26.
+Agent framework for Java.
 
-Loopy combines **GOAP (Goal-Oriented Action Planning)** with **actor-model** execution patterns and **LLM integration** to build autonomous agents that plan, act, and adapt - all in idiomatic Java.
+Loopy uses **GOAP (Goal-Oriented Action Planning)** and **LLM integration** to build autonomous agents that plan, act, and adapt.
 
 ## Features
 
 - **GOAP Planner** - A\* search finds the lowest-cost sequence of actions to reach a goal from the current world state
-- **OODA Loop Runtime** - Observe, Orient, Decide, Act execution cycle with virtual threads
-- **Actor Model** - Mailbox-based message passing, behavior switching, and lifecycle events
+- **OODA Loop Runtime** - Observe, Orient, Decide, Act execution cycle
 - **LLM Integration** - OpenAI client with tool-calling loop, structured output parsing, and cost tracking
 - **Supervision Strategies** - Retry, Replan, Fail, or Escalate to LLM on action failures
-- **Structured Concurrency** - Parallel tool execution via `StructuredTaskScope`
-- **Zero Frameworks** - Pure Java 26 with preview features, no Spring/Quarkus/Micronaut
 
 ## Modules
 
@@ -83,25 +80,6 @@ OPENAI_API_KEY=sk-... mvn -pl loopy-examples exec:java -Dexec.mainClass="com.loo
 
 ## Architecture
 
-### Module Dependencies
-
-```mermaid
-graph TD
-    DSL["loopy-dsl<br/><i>Fluent Builder API</i>"]
-    CORE["loopy-core<br/><i>Core Abstractions</i>"]
-    RT["loopy-runtime<br/><i>Execution Engine</i>"]
-    LLM["loopy-llm<br/><i>LLM Clients</i>"]
-    EX["loopy-examples<br/><i>Example Agents</i>"]
-
-    DSL --> CORE
-    RT --> CORE
-    RT --> LLM
-    LLM --> CORE
-    EX --> DSL
-    EX --> RT
-    EX --> LLM
-```
-
 ### OODA Execution Loop
 
 ```mermaid
@@ -109,11 +87,11 @@ flowchart TD
     START([run]) --> OBSERVE
 
     subgraph OODA["OODA Loop"]
-        OBSERVE["**Observe**<br/>Derive beliefs from Mailbox"]
+        OBSERVE["Observe<br/>Derive beliefs from Mailbox"]
         CHECK{"Goal<br/>satisfied?"}
-        ORIENT["**Orient**<br/>GOAP A* Planning"]
-        DECIDE["**Decide**<br/>Pick next action from plan"]
-        ACT["**Act**<br/>Execute action on virtual thread"]
+        ORIENT["Orient<br/>GOAP A* Planning"]
+        DECIDE["Decide<br/>Pick next action from plan"]
+        ACT["Act<br/>Execute action on virtual thread"]
         POST["Post result to Mailbox"]
 
         OBSERVE --> CHECK
@@ -132,29 +110,6 @@ flowchart TD
     end
 
     style OODA fill:none,stroke:#666,stroke-dasharray:5 5
-```
-
-### Agent Definition & Data Flow
-
-```mermaid
-flowchart LR
-    subgraph AgentDefinition["AgentDefinition (immutable blueprint)"]
-        direction TB
-        A["Actions<br/><i>name, I/O types, cost,<br/>preconditions, effects, executor</i>"]
-        G["Goals<br/><i>name, preconditions,<br/>output type, value</i>"]
-        C["Conditions<br/><i>type-predicate,<br/>expression, custom</i>"]
-        S["SupervisionStrategy<br/><i>Replan | Retry | Fail | Escalate</i>"]
-    end
-
-    subgraph Runtime["AgentRunner (per execution)"]
-        direction TB
-        MB["Mailbox<br/><i>typed message store</i>"]
-        BP["BeliefDeriver<br/><i>Mailbox → Beliefs</i>"]
-        PL["GoapPlanner<br/><i>Beliefs + Actions + Goal → Plan</i>"]
-    end
-
-    AgentDefinition --> Runtime
-    MB --> BP --> PL
 ```
 
 ### Tool Loop (LLM Function Calling)
@@ -355,7 +310,7 @@ var tools = ToolRegistry.empty()
 
 ### Tool Loop
 
-The `ToolLoop` drives multi-turn LLM function-calling conversations. Multiple parallel tool calls are executed concurrently via `StructuredTaskScope`.
+The `ToolLoop` drives multi-turn LLM function-calling conversations.
 
 ```java
 var request = LlmRequest.simple("gpt-4o-mini", "What's the weather in Paris and Tokyo?")
@@ -403,7 +358,7 @@ Available strategies:
 
 ### Lifecycle Listeners
 
-Observe agent execution in real time. Listeners receive every lifecycle event - useful for logging, monitoring, human-in-the-loop handoffs, or custom tracing.
+Observe agent execution. Listeners receive every lifecycle event - useful for logging, monitoring, human-in-the-loop handoffs, or custom tracing.
 
 ```java
 var listener = LifecycleListener.logging();
@@ -428,7 +383,7 @@ var runner = new AgentRunner(List.of(composed));
 
 ### Running an Agent
 
-Wire everything together and run. The `AgentRunner` executes the OODA loop on virtual threads until the goal is reached, the agent gets stuck, or a failure occurs.
+Wire everything together and run.
 
 ```java
 var runner = new AgentRunner(List.of(LifecycleListener.logging()));
@@ -464,7 +419,7 @@ switch (execution) {
 
 ### Execution Tracing
 
-Every run produces an `ExecutionTrace` with full auditability - step durations, token usage, cost, and all lifecycle events.
+Every run produces an `ExecutionTrace` with auditability - step durations, token usage, cost, and all lifecycle events.
 
 ```java
 case AgentExecution.Completed completed -> {
