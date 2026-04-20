@@ -33,7 +33,7 @@ public final class AgentRunner {
     private static final Logger LOG = LoggerFactory.getLogger(AgentRunner.class);
 
     private final AgentId agentId;
-    private final LifecycleListener listener;
+    private LifecycleListener listener;
     private final List<AgentLifecycleEvent> events = new ArrayList<>();
     private final List<ExecutionTrace.StepRecord> steps = new ArrayList<>();
     private final Set<String> modelsUsed = new HashSet<>();
@@ -41,9 +41,8 @@ public final class AgentRunner {
     private AgentBehavior behavior = null;
     private boolean executed = false;
 
-    public AgentRunner(List<LifecycleListener> listeners) {
+    public AgentRunner() {
         this.agentId = AgentId.generate();
-        this.listener = compositeListener(listeners);
     }
 
     /**
@@ -71,6 +70,7 @@ public final class AgentRunner {
                     "AgentRunner is single-use - create a new instance for each run");
         }
         executed = true;
+        this.listener = compositeListener(options.listeners());
 
         var start = Instant.now();
         var mailbox = InMemoryMailbox.from(initialState);
@@ -136,7 +136,8 @@ public final class AgentRunner {
             var actionStart = Instant.now();
             ActionResult actionResult;
             try {
-                var context = new ActionContext(mailbox, llmClient, tools, agent, nextActionDef);
+                var context = new ActionContext(mailbox, llmClient, tools, agent, nextActionDef,
+                        options.maxToolLoopIterations());
                 var futureResult = new CompletableFuture<ActionResult>();
                 Thread.ofVirtual()
                         .name("action-" + nextActionDef.name())
@@ -164,7 +165,7 @@ public final class AgentRunner {
                     steps.add(new ExecutionTrace.StepRecord(nextActionDef.name(), actionDuration, actionResult, success.usage()));
                 }
                 case ActionResult.Failure failure -> {
-                    var supervision = agent.defaultSupervision();
+                    var supervision = options.defaultSupervision();
                     emit(new AgentLifecycleEvent.ActionFailed(nextActionDef, failure.cause(), supervision, Instant.now()));
                     steps.add(new ExecutionTrace.StepRecord(nextActionDef.name(), actionDuration, actionResult, TokenUsage.zero()));
 

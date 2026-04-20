@@ -18,7 +18,8 @@ public record ActionContext(
         LlmClient llmClient,
         ToolRegistry toolRegistry,
         AgentDefinition agent,
-        ActionDefinition currentAction) {
+        ActionDefinition currentAction,
+        int maxToolLoopIterations) {
 
     /**
      * Returns the resolved inputs for this action.

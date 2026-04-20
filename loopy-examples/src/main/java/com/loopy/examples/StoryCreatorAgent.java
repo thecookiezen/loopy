@@ -109,7 +109,7 @@ public final class StoryCreatorAgent {
                 List.of(LifecycleListener.logging()));
 
         LOG.info("Starting Story Creator Agent...");
-        var runner = new AgentRunner(List.of(LifecycleListener.logging()));
+        var runner = new AgentRunner();
         var execution = runner.run(
                 agent, goal, initialState, llmClient,
                 ToolRegistry.empty(), new GoapPlanner(), new DefaultBeliefDeriver(), options);

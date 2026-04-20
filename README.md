@@ -63,13 +63,13 @@ var goal = agent.goals().iterator().next();
 var initialState = ImmutableMailbox.empty()
         .post(new StarInput("Betelgeuse"));
 
-var runner = new AgentRunner(List.of(LifecycleListener.logging()));
+var runner = new AgentRunner();
 var execution = runner.run(
         agent, goal, initialState, llmClient,
         ToolRegistry.empty(), new GoapPlanner(),
         new DefaultBeliefDeriver(), new RunOptions(10, 5,
                 Duration.ofMinutes(2), List.of(),
-                agent.defaultSupervision(), List.of()));
+                new SupervisionStrategy.Replan(), List.of(LifecycleListener.logging())));
 ```
 
 Run the example (requires `OPENAI_API_KEY` environment variable):
@@ -141,7 +141,7 @@ public record StarSummary(String starName, String summary) {}
 
 ### Building an Agent
 
-Use the fluent `AgentBuilder` DSL to define an agent with actions, goals, conditions, and a supervision strategy.
+Use the fluent `AgentBuilder` DSL to define an agent with actions, goals, and a supervision strategy.
 
 ```java
 var agent = AgentBuilder.named("star-news")
@@ -218,16 +218,12 @@ AgentBuilder.named("data-pipeline")
         .build();
 ```
 
-### Custom Conditions
+### Preconditions
 
-Conditions are evaluated against the mailbox. You can register type-predicate conditions, expression-based conditions, or fully custom evaluators.
+When an action needs a custom condition that must be evaluated against the mailbox at runtime, use `requiresPredicate` to declare both the precondition and its evaluator in one place. The evaluator lives directly on the precondition -- no separate registration needed.
 
 ```java
 AgentBuilder.named("review-agent")
-        .condition("score-high", ReviewScore.class,
-                score -> score.value() >= 0.8)
-        .condition("ready-to-publish", ReviewScore.class,
-                "value >= 0.8 && !needsEdit", myExpressionEngine)
         .action("approve")
             .input(ReviewScore.class)
             .requiresPredicate("score-high", ReviewScore.class,
@@ -240,6 +236,22 @@ AgentBuilder.named("review-agent")
             .satisfiedBy(ApprovedReview.class)
             .add()
         .build();
+```
+
+You can also use expression-based evaluators with `requiresExpression`:
+
+```java
+.requiresExpression("ready-to-publish", ReviewScore.class,
+        "value >= 0.8 && !needsEdit", myExpressionEngine)
+```
+
+Custom conditions declared with `.requires(Condition.custom("name"))` (no explicit evaluator) are treated as undecidable during belief derivation -- they rely on being established by another action's effects during planning.
+
+You can also use expression-based evaluators with `requiresExpression`:
+
+```java
+.requiresExpression("ready-to-publish", ReviewScore.class,
+        "value >= 0.8 && !needsEdit", myExpressionEngine)
 ```
 
 ### Mailbox
@@ -378,7 +390,7 @@ var customListener = (LifecycleListener) event -> {
 };
 
 var composed = listener.andThen(customListener);
-var runner = new AgentRunner(List.of(composed));
+var runner = new AgentRunner();
 ```
 
 ### Running an Agent
@@ -386,7 +398,7 @@ var runner = new AgentRunner(List.of(composed));
 Wire everything together and run.
 
 ```java
-var runner = new AgentRunner(List.of(LifecycleListener.logging()));
+var runner = new AgentRunner();
 var execution = runner.run(
         agent,
         goal,
@@ -397,11 +409,11 @@ var execution = runner.run(
         new DefaultBeliefDeriver(),
         new RunOptions(
                 10,                             // maxSteps
-                5,                              // maxPlans
+                5,                              // maxToolLoopIterations
                 Duration.ofMinutes(2),          // timeout per action
                 List.of(),                      // pricingModels
-                agent.defaultSupervision(),     // supervision strategy
-                List.of()                       // additional listeners
+                new SupervisionStrategy.Replan(), // supervision strategy
+                List.of(LifecycleListener.logging()) // lifecycle listeners
         ));
 
 switch (execution) {
@@ -479,8 +491,7 @@ GoalDefinition summaryGoal = agent.goals().stream()
         .filter(g -> g.name().equals("summary-only"))
         .findFirst().orElseThrow();
 
-var runner = new AgentRunner(List.of(LifecycleListener.logging()));
-
+var runner = new AgentRunner();
 var deepResult = runner.run(agent, analysisGoal, initial, llm,
         tools, planner, beliefDeriver, options);
 

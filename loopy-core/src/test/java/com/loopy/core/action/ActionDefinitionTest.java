@@ -38,7 +38,8 @@ class ActionDefinitionTest {
                 Set.of(TypeToken.of(String.class)), Set.of(), 0.5, false);
 
         var expectedPrecond = Precondition.requires(Condition.typePresent(String.class));
-        assertThat(action.preconditions()).contains(expectedPrecond);
+        assertThat(action.preconditions()).anyMatch(p ->
+                p instanceof Precondition.Requires && p.condition().equals(expectedPrecond.condition()));
     }
 
     @Test

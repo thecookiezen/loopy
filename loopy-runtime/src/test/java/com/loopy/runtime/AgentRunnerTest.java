@@ -45,12 +45,8 @@ class AgentRunnerTest {
 
 
     private AgentDefinition simpleAgent() {
-        var action = new ActionDefinition(
-                "transform", "Transforms input",
-                Set.of(), Set.of(),
-                Set.of(INPUT_TYPE),
-                Set.of(OUTPUT_TYPE),
-                0.3, false);
+        var action = new ActionDefinition("transform", "Transforms input",
+                Set.of(), Set.of(), Set.of(INPUT_TYPE), Set.of(OUTPUT_TYPE), 0.3, false);
         var executor = (ActionExecutor) ctx -> {
             var input = ctx.input(Input.class);
             return ActionResult.Success.of(new Output("processed: " + input.text()));
@@ -59,8 +55,7 @@ class AgentRunnerTest {
                 Set.of(Precondition.requires(Condition.typePresent(OUTPUT_TYPE))),
                 OUTPUT_TYPE, 1.0);
         return new AgentDefinition("test-agent", "Test agent",
-                List.of(new ActionBinding(action, executor)),
-                Set.of(goal), Set.of());
+                List.of(new ActionBinding(action, executor)), Set.of(goal));
     }
 
     @Test
@@ -69,10 +64,8 @@ class AgentRunnerTest {
         var goal = agent.goals().iterator().next();
         var mailbox = ImmutableMailbox.empty().post(new Input("hello"));
         
-        var runner = new AgentRunner(List.of());
-        var execution = runner.run(agent, goal, mailbox, llm,
-                ToolRegistry.empty(), new GoapPlanner(),
-                new DefaultBeliefDeriver(), options);
+        var runner = new AgentRunner();
+        var execution = runner.run(agent, goal, mailbox, llm, ToolRegistry.empty(), new GoapPlanner(), new DefaultBeliefDeriver(), options);
 
         assertThat(execution).isInstanceOf(AgentExecution.Completed.class);
         var completed = (AgentExecution.Completed) execution;
@@ -89,11 +82,11 @@ class AgentRunnerTest {
         var agent = simpleAgent();
         var goal = agent.goals().iterator().next();
         var mailbox = ImmutableMailbox.empty().post(new Input("hi"));
-        
-        var runner = new AgentRunner(List.of(collector));
-        runner.run(agent, goal, mailbox, llm,
-                ToolRegistry.empty(), new GoapPlanner(),
-                new DefaultBeliefDeriver(), options);
+
+        var options = new RunOptions(10, 5, Duration.ofSeconds(30),
+                List.of(), new SupervisionStrategy.Replan(), List.of(collector));
+        var runner = new AgentRunner();
+        runner.run(agent, goal, mailbox, llm, ToolRegistry.empty(), new GoapPlanner(), new DefaultBeliefDeriver(), options);
 
         assertThat(events.stream()
                 .anyMatch(e -> e instanceof AgentLifecycleEvent.Started)).isTrue();
@@ -116,14 +109,12 @@ class AgentRunnerTest {
                 OUTPUT_TYPE, 1.0);
         var agent = new AgentDefinition("stuck-agent", "",
                 List.of(new ActionBinding(action, executor)),
-                Set.of(goal), Set.of());
+                Set.of(goal));
 
         var mailbox = ImmutableMailbox.empty();
         
-        var runner = new AgentRunner(List.of());
-        var execution = runner.run(agent, agent.goals().iterator().next(),
-                mailbox, llm, ToolRegistry.empty(), new GoapPlanner(),
-                new DefaultBeliefDeriver(), options);
+        var runner = new AgentRunner();
+        var execution = runner.run(agent, agent.goals().iterator().next(), mailbox, llm, ToolRegistry.empty(), new GoapPlanner(), new DefaultBeliefDeriver(), options);
 
         assertThat(execution).isInstanceOf(AgentExecution.Stuck.class);
     }
@@ -143,14 +134,17 @@ class AgentRunnerTest {
                 OUTPUT_TYPE, 1.0);
         var agent = new AgentDefinition("fail-agent", "",
                 List.of(new ActionBinding(action, executor)),
-                Set.of(goal), Set.of(), new SupervisionStrategy.Fail());
+                Set.of(goal), new SupervisionStrategy.Fail());
+
+        var failOptions = new RunOptions(10, 5, Duration.ofSeconds(30),
+                List.of(), new SupervisionStrategy.Fail(), List.of());
 
         var mailbox = ImmutableMailbox.empty().post(new Input("test"));
         
-        var runner = new AgentRunner(List.of());
+        var runner = new AgentRunner();
         var execution = runner.run(agent, agent.goals().iterator().next(),
                 mailbox, llm, ToolRegistry.empty(), new GoapPlanner(),
-                new DefaultBeliefDeriver(), options);
+                new DefaultBeliefDeriver(), failOptions);
 
         assertThat(execution).isInstanceOf(AgentExecution.Failed.class);
     }
@@ -161,7 +155,7 @@ class AgentRunnerTest {
         var goal = agent.goals().iterator().next();
         var mailbox = ImmutableMailbox.empty().post(new Input("x"));
         
-        var runner = new AgentRunner(List.of());
+        var runner = new AgentRunner();
         runner.run(agent, goal, mailbox, llm, ToolRegistry.empty(),
                 new GoapPlanner(), new DefaultBeliefDeriver(), options);
 

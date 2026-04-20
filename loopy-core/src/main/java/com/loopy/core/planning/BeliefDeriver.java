@@ -20,7 +20,7 @@ public interface BeliefDeriver {
      *
      * @param mailbox the current mailbox state
      * @param agent   the agent definition (used to discover types and condition
-     *                evaluators)
+     *                evaluators from actions)
      * @return the derived beliefs
      */
     Beliefs derive(Mailbox mailbox, AgentDefinition agent);

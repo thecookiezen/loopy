@@ -5,6 +5,7 @@ import com.loopy.core.action.ActionBinding;
 import com.loopy.core.action.ActionDefinition;
 import com.loopy.core.action.ActionExecutor;
 import com.loopy.core.condition.Condition;
+import com.loopy.core.condition.ConditionBinding;
 import com.loopy.core.condition.Effect;
 import com.loopy.core.condition.ExpressionEvaluator;
 import com.loopy.core.condition.Precondition;
@@ -114,42 +115,24 @@ public final class ActionBuilder {
     }
 
     /**
-     * Register a predicate as both a precondition on this action
-     * and a condition binding on the agent.
-     *
-     * Equivalent to calling {@code requires(Condition.custom(name))}
-     * plus {@code agent.condition(name, type, test)}.
-     *
-     * @param name the condition name
-     * @param type the mailbox message type to test
-     * @param test the predicate to evaluate
-     * @param <T>  the message type
-     * @return this builder
+     * Add a predicate-based precondition with its evaluator.
+     * The evaluator lives directly on the precondition, so there is
+     * no separate registration step.
      */
     public <T> ActionBuilder requiresPredicate(
             String name, Class<T> type, Predicate<T> test) {
-        preconditions.add(Precondition.requires(Condition.custom(name)));
-        parent.condition(name, type, test);
+        var binding = ConditionBinding.typePredicate(name, TypeToken.of(type), test);
+        preconditions.add(Precondition.requires(binding.condition(), binding.evaluator()));
         return this;
     }
 
     /**
-     * Register an expression-based condition as both a precondition on this action
-     * and a condition binding on the agent.
-     *
-     * Equivalent to calling {@code requires(Condition.custom(name))}
-     * plus {@code agent.condition(name, type, expression, engine)}.
-     *
-     * @param name       the condition name
-     * @param type       the mailbox message type to bind as context
-     * @param expression the expression string
-     * @param engine     the expression evaluator engine
-     * @return this builder
+     * Add an expression-based precondition with its evaluator.
      */
     public ActionBuilder requiresExpression(
             String name, Class<?> type, String expression, ExpressionEvaluator engine) {
-        preconditions.add(Precondition.requires(Condition.custom(name)));
-        parent.condition(name, type, expression, engine);
+        var binding = ConditionBinding.expression(name, type, expression, engine);
+        preconditions.add(Precondition.requires(binding.condition(), binding.evaluator()));
         return this;
     }
 

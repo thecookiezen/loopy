@@ -141,8 +141,6 @@ class GoapPlannerTest {
         assertThat(plan).isEmpty();
     }
 
-    // ---- Helpers ----
-
     private static ActionDefinition action(
             String name,
             Set<Precondition> preconditions,

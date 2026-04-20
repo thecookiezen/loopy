@@ -10,14 +10,17 @@ import java.util.List;
 /**
  * Configuration options for a single {@link AgentRunner} execution.
  *
- * Controls the execution boundaries, cost estimation, supervision,
- * and observability of an agent run.
+ * The single source of truth for execution boundaries, cost estimation,
+ * supervision, and observability of an agent run.
  *
  * @param maxSteps              maximum number of OODA loop iterations
- * @param maxToolLoopIterations maximum number of tool-calling iterations per LLM call
+ * @param maxToolLoopIterations maximum number of tool-calling iterations per LLM call,
+ *                              passed to {@link com.loopy.core.action.ActionContext} for use
+ *                              with {@link ToolLoop}
  * @param timeout               wall-clock timeout per action execution
  * @param pricingModels         pricing models used for cost estimation
- * @param defaultSupervision    the default strategy when an action fails
+ * @param defaultSupervision    the default strategy when an action fails;
+ *                              overrides the agent's built-in supervision for this run
  * @param listeners             lifecycle listeners to observe execution events
  */
 public record RunOptions(

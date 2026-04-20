@@ -4,20 +4,14 @@ import com.loopy.core.action.ActionBinding;
 import com.loopy.core.agent.AgentDefinition;
 import com.loopy.core.agent.GoalDefinition;
 import com.loopy.core.agent.SupervisionStrategy;
-import com.loopy.core.condition.Condition;
-import com.loopy.core.TypeToken;
-import com.loopy.core.condition.ConditionBinding;
-import com.loopy.core.condition.ConditionEvaluator;
-import com.loopy.core.condition.ExpressionEvaluator;
 
-import java.util.function.Predicate;
 import java.util.*;
 
 /**
  * Fluent builder for constructing {@link AgentDefinition} instances.
  *
  * Provides a readable DSL for defining agents with actions, goals,
- * conditions, and supervision strategies:
+ * and supervision strategies:
  *
  * {@code
  * var agent = AgentBuilder.named("my-agent")
@@ -38,7 +32,6 @@ public final class AgentBuilder {
     private String description = "";
     private final List<ActionBinding> actions = new ArrayList<>();
     private final Set<GoalDefinition> goals = new LinkedHashSet<>();
-    private final Set<ConditionBinding> conditions = new LinkedHashSet<>();
     private SupervisionStrategy defaultSupervision = new SupervisionStrategy.Replan();
 
     private AgentBuilder(String name) {
@@ -102,62 +95,6 @@ public final class AgentBuilder {
         return new GoalBuilder(this, name);
     }
 
-    /**
-     * Register a custom condition binding with an explicit evaluator.
-     *
-     * @param condition the custom condition
-     * @param evaluator the evaluator for this condition
-     * @return this builder
-     */
-    public AgentBuilder condition(Condition.Custom condition, ConditionEvaluator evaluator) {
-        conditions.add(ConditionBinding.custom(condition, evaluator));
-        return this;
-    }
-
-    /**
-     * Register a custom condition binding by name.
-     *
-     * @param name      the condition name
-     * @param evaluator the evaluator for this condition
-     * @return this builder
-     */
-    public AgentBuilder condition(String name, ConditionEvaluator evaluator) {
-        conditions.add(ConditionBinding.custom(name, evaluator));
-        return this;
-    }
-
-    /**
-     * Register a type-predicate condition binding.
-     * The condition is satisfied when the latest mailbox message of
-     * {@code targetType} passes the given predicate.
-     *
-     * @param name       the condition name
-     * @param targetType the mailbox message type to test
-     * @param test       the predicate to evaluate against the latest message
-     * @param <T>        the message type
-     * @return this builder
-     */
-    public <T> AgentBuilder condition(
-            String name, Class<T> targetType, Predicate<T> test) {
-        conditions.add(ConditionBinding.typePredicate(name, TypeToken.of(targetType), test));
-        return this;
-    }
-
-    /**
-     * Register an expression-based condition binding.
-     *
-     * @param name       the condition name
-     * @param targetType the mailbox message type to bind as context
-     * @param expression the expression string
-     * @param engine     the expression evaluator engine
-     * @return this builder
-     */
-    public AgentBuilder condition(
-            String name, Class<?> targetType, String expression, ExpressionEvaluator engine) {
-        conditions.add(ConditionBinding.expression(name, targetType, expression, engine));
-        return this;
-    }
-
     AgentBuilder addAction(ActionBinding binding) {
         actions.add(binding);
         return this;
@@ -181,6 +118,6 @@ public final class AgentBuilder {
         if (goals.isEmpty()) {
             throw new IllegalStateException("Agent must have at least one goal");
         }
-        return new AgentDefinition(name, description, actions, goals, conditions, defaultSupervision);
+        return new AgentDefinition(name, description, actions, goals, defaultSupervision);
     }
 }
