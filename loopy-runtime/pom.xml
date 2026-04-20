@@ -15,10 +15,12 @@
         <dependency>
             <groupId>com.loopy</groupId>
             <artifactId>loopy-core</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.loopy</groupId>
             <artifactId>loopy-llm</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>
