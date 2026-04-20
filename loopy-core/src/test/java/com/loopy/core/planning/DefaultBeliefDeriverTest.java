@@ -6,8 +6,9 @@ import com.loopy.core.action.ActionDefinition;
 import com.loopy.core.action.ActionResult;
 import com.loopy.core.agent.AgentDefinition;
 import com.loopy.core.condition.Condition;
-import com.loopy.core.condition.ConditionBinding;
+import com.loopy.core.condition.ConditionEvaluator;
 import com.loopy.core.condition.ConditionResult;
+import com.loopy.core.condition.Precondition;
 import com.loopy.core.mailbox.ImmutableMailbox;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +35,7 @@ class DefaultBeliefDeriverTest {
                                 0.5, false);
                 var agent = new AgentDefinition("test", "test",
                                 List.of(new ActionBinding(action, ctx -> ActionResult.Success.of("hi"))),
-                                Set.of(), Set.of());
+                                Set.of());
 
                 var beliefs = deriver.derive(mailbox, agent);
 
@@ -43,17 +44,20 @@ class DefaultBeliefDeriverTest {
         }
 
         @Test
-        void evaluatesConditionBindings() {
+        void evaluatesCustomConditionFromPrecondition() {
                 var mailbox = ImmutableMailbox.empty().post("hello");
 
-                var hasGreeting = new Condition.Custom("hasGreeting");
-                var binding = ConditionBinding.custom(hasGreeting,
-                                m -> m.last(TypeToken.of(String.class)).isPresent()
-                                                ? ConditionResult.satisfied()
-                                                : ConditionResult.unsatisfied());
+                var hasGreeting = Condition.custom("hasGreeting");
+                ConditionEvaluator evaluator = m -> m.last(TypeToken.of(String.class)).isPresent()
+                                ? ConditionResult.satisfied()
+                                : ConditionResult.unsatisfied();
 
+                var action = new ActionDefinition("test", "test",
+                                Set.of(Precondition.requires(hasGreeting, evaluator)),
+                                Set.of(), Set.of(), Set.of(), 0.5, false);
                 var agent = new AgentDefinition("test", "test",
-                                List.of(), Set.of(), Set.of(binding));
+                                List.of(new ActionBinding(action, ctx -> null)),
+                                Set.of());
 
                 var beliefs = deriver.derive(mailbox, agent);
 
@@ -64,12 +68,14 @@ class DefaultBeliefDeriverTest {
         void undecidableConditionsAreOmitted() {
                 var mailbox = ImmutableMailbox.empty();
 
-                var mystery = new Condition.Custom("mystery");
-                var binding = ConditionBinding.custom(mystery,
-                                m -> ConditionResult.undecidable("not enough data"));
+                var mystery = Condition.custom("mystery");
 
+                var action = new ActionDefinition("test", "test",
+                                Set.of(Precondition.requires(mystery)),
+                                Set.of(), Set.of(), Set.of(), 0.5, false);
                 var agent = new AgentDefinition("test", "test",
-                                List.of(), Set.of(), Set.of(binding));
+                                List.of(new ActionBinding(action, ctx -> null)),
+                                Set.of());
 
                 var beliefs = deriver.derive(mailbox, agent);
 
@@ -80,8 +86,11 @@ class DefaultBeliefDeriverTest {
         @Test
         void emptyMailboxAndAgent_returnsEmptyBeliefs() {
                 var mailbox = ImmutableMailbox.empty();
+                var action = new ActionDefinition("test", "test", Set.of(), Set.of(),
+                                Set.of(), Set.of(), 0.5, false);
                 var agent = new AgentDefinition("test", "test",
-                                List.of(), Set.of(), Set.of());
+                                List.of(new ActionBinding(action, ctx -> null)),
+                                Set.of());
 
                 var beliefs = deriver.derive(mailbox, agent);
 
