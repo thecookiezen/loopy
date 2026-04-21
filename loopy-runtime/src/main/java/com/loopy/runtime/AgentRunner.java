@@ -143,7 +143,7 @@ public final class AgentRunner {
                         .name("action-" + nextActionDef.name())
                         .start(() -> {
                             try {
-                                futureResult.complete(binding.executor().execute(context));
+                                futureResult.complete(binding.behavior().execute(context));
                             } catch (Exception e) {
                                 futureResult.complete(new ActionResult.Failure(e.getMessage(), e));
                             }

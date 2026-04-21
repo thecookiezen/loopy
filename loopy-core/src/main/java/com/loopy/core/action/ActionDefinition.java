@@ -15,7 +15,7 @@ import java.util.Set;
  * the planner needs to reason about the action without executing it.
  *
  * The executable behavior is provided separately via {@link ActionBinding}
- * which pairs this with an {@link ActionExecutor}.
+ * which pairs this with an {@link ActionBehavior}.
  */
 public record ActionDefinition(
         String name,

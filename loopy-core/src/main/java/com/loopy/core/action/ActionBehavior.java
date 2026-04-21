@@ -1,7 +1,7 @@
 package com.loopy.core.action;
 
 /**
- * Executes an action given the current {@link ActionContext}.
+ * Defines the behavior of an action given the current {@link ActionContext}.
  *
  * Implementations encapsulate the side-effecting logic of an action (e.g. calling
  * an LLM, invoking a tool, processing data). The context provides access to the
@@ -14,7 +14,7 @@ package com.loopy.core.action;
  * @see ActionBinding
  */
 @FunctionalInterface
-public interface ActionExecutor {
+public interface ActionBehavior {
     /**
      * Execute the action and return the result.
      *

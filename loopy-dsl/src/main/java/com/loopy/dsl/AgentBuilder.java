@@ -18,7 +18,7 @@ import java.util.*;
  *         .describedAs("Does things")
  *         .action("step1")
  *             .input(Input.class).output(Output.class)
- *             .executor(ctx -> ActionResult.Success.of("result"))
+ *             .behavior(ctx -> ActionResult.Success.of("result"))
  *             .add()
  *         .goal("finish")
  *             .satisfiedBy(Output.class)

@@ -3,7 +3,7 @@ package com.loopy.dsl;
 import com.loopy.core.TypeToken;
 import com.loopy.core.action.ActionBinding;
 import com.loopy.core.action.ActionDefinition;
-import com.loopy.core.action.ActionExecutor;
+import com.loopy.core.action.ActionBehavior;
 import com.loopy.core.condition.Condition;
 import com.loopy.core.condition.ConditionBinding;
 import com.loopy.core.condition.Effect;
@@ -24,7 +24,7 @@ public final class ActionBuilder {
     private final Set<TypeToken<?>> outputTypes = new LinkedHashSet<>();
     private double cost = 0.5;
     private boolean canRerun = false;
-    private ActionExecutor executor;
+    private ActionBehavior behavior;
 
     ActionBuilder(AgentBuilder parent, String name) {
         this.parent = parent;
@@ -162,12 +162,12 @@ public final class ActionBuilder {
     /**
      * Set the executable behavior for this action.
      *
-     * @param executor the action executor
+     * @param behavior the action behavior
      * @return this builder
-     * @see com.loopy.core.action.ActionExecutor
+     * @see com.loopy.core.action.ActionBehavior
      */
-    public ActionBuilder executor(ActionExecutor executor) {
-        this.executor = executor;
+    public ActionBuilder behavior(ActionBehavior behavior) {
+        this.behavior = behavior;
         return this;
     }
 
@@ -175,15 +175,15 @@ public final class ActionBuilder {
      * Add this action to the parent agent builder.
      *
      * @return the parent agent builder for further chaining
-     * @throws IllegalStateException if no executor has been set
+     * @throws IllegalStateException if no behavior has been set
      */
     public AgentBuilder add() {
-        if (executor == null) {
-            throw new IllegalStateException("Action '" + name + "' must have an executor");
+        if (behavior == null) {
+            throw new IllegalStateException("Action '" + name + "' must have a behavior");
         }
         var definition = new ActionDefinition(
                 name, description, preconditions, effects,
                 inputTypes, outputTypes, cost, canRerun);
-        return parent.addAction(new ActionBinding(definition, executor));
+        return parent.addAction(new ActionBinding(definition, behavior));
     }
 }

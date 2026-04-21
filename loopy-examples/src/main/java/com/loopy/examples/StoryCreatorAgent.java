@@ -53,7 +53,7 @@ public final class StoryCreatorAgent {
                     .input(StoryPrompt.class)
                     .output(StoryDraft.class)
                     .cost(0.5)
-                    .executor(ctx -> {
+                    .behavior(ctx -> {
                         var prompt = ctx.input(StoryPrompt.class);
 
                         var request = LlmRequest.simple("gpt-4o-mini",
@@ -70,7 +70,7 @@ public final class StoryCreatorAgent {
                     .input(StoryDraft.class)
                     .output(ReviewedStory.class)
                     .cost(0.3)
-                    .executor(ctx -> {
+                    .behavior(ctx -> {
                         var draft = ctx.input(StoryDraft.class);
 
                         var request = LlmRequest.simple("gpt-4o-mini",

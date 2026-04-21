@@ -4,7 +4,7 @@ import com.loopy.core.TokenUsage;
 import com.loopy.core.TypeToken;
 import com.loopy.core.action.ActionBinding;
 import com.loopy.core.action.ActionDefinition;
-import com.loopy.core.action.ActionExecutor;
+import com.loopy.core.action.ActionBehavior;
 import com.loopy.core.action.ActionResult;
 import com.loopy.core.agent.AgentDefinition;
 import com.loopy.core.agent.AgentLifecycleEvent;
@@ -47,7 +47,7 @@ class AgentRunnerTest {
     private AgentDefinition simpleAgent() {
         var action = new ActionDefinition("transform", "Transforms input",
                 Set.of(), Set.of(), Set.of(INPUT_TYPE), Set.of(OUTPUT_TYPE), 0.3, false);
-        var executor = (ActionExecutor) ctx -> {
+        var behavior = (ActionBehavior) ctx -> {
             var input = ctx.input(Input.class);
             return ActionResult.Success.of(new Output("processed: " + input.text()));
         };
@@ -55,7 +55,7 @@ class AgentRunnerTest {
                 Set.of(Precondition.requires(Condition.typePresent(OUTPUT_TYPE))),
                 OUTPUT_TYPE, 1.0);
         return new AgentDefinition("test-agent", "Test agent",
-                List.of(new ActionBinding(action, executor)), Set.of(goal));
+                List.of(new ActionBinding(action, behavior)), Set.of(goal));
     }
 
     @Test
@@ -102,13 +102,13 @@ class AgentRunnerTest {
                 "a", "a", Set.of(), Set.of(),
                 Set.of(), Set.of(OUTPUT_TYPE),
                 0.5, false);
-        var executor = (com.loopy.core.action.ActionExecutor) ctx ->
+        var behavior = (com.loopy.core.action.ActionBehavior) ctx ->
                 ActionResult.Success.of(new Output("x"));
         var goal = new GoalDefinition("g", "g",
                 Set.of(Precondition.requires(Condition.custom("impossible"))),
                 OUTPUT_TYPE, 1.0);
         var agent = new AgentDefinition("stuck-agent", "",
-                List.of(new ActionBinding(action, executor)),
+                List.of(new ActionBinding(action, behavior)),
                 Set.of(goal));
 
         var mailbox = ImmutableMailbox.empty();
@@ -126,14 +126,14 @@ class AgentRunnerTest {
                 Set.of(INPUT_TYPE),
                 Set.of(OUTPUT_TYPE),
                 0.5, false);
-        var executor = (com.loopy.core.action.ActionExecutor) ctx -> {
+        var behavior = (com.loopy.core.action.ActionBehavior) ctx -> {
             throw new RuntimeException("boom");
         };
         var goal = new GoalDefinition("g", "g",
                 Set.of(Precondition.requires(Condition.typePresent(OUTPUT_TYPE))),
                 OUTPUT_TYPE, 1.0);
         var agent = new AgentDefinition("fail-agent", "",
-                List.of(new ActionBinding(action, executor)),
+                List.of(new ActionBinding(action, behavior)),
                 Set.of(goal), new SupervisionStrategy.Fail());
 
         var failOptions = new RunOptions(10, 5, Duration.ofSeconds(30),

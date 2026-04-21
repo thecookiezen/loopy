@@ -2,7 +2,7 @@ package com.loopy.core.action;
 
 /**
  * Links an {@link ActionDefinition} (planning metadata) to its
- * executable behavior ({@link ActionExecutor}).
+ * executable behavior ({@link ActionBehavior}).
  */
-public record ActionBinding(ActionDefinition definition, ActionExecutor executor) {
+public record ActionBinding(ActionDefinition definition, ActionBehavior behavior) {
 }
