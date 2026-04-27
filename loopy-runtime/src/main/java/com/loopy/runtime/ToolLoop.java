@@ -1,13 +1,12 @@
 package com.loopy.runtime;
 
 import com.loopy.core.TokenUsage;
+import com.loopy.core.tool.DefaultToolCallExecutor;
+import com.loopy.core.tool.ToolCallExecutor;
+import com.loopy.core.tool.ToolCallResult;
 import com.loopy.core.tool.ToolRegistry;
 import com.loopy.core.llm.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.stream.Stream;
@@ -17,14 +16,18 @@ import java.util.stream.Stream;
  */
 public final class ToolLoop {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ToolLoop.class);
+    private final ToolCallExecutor executor;
+
+    public ToolLoop() {
+        this.executor = DefaultToolCallExecutor.INSTANCE;
+    }
 
     /**
      * Snapshot of one iteration of the tool loop.
      */
     private record LoopState(
             List<ChatMessage> messages,
-            List<ToolCallRecord> toolCalls,
+            List<ToolCallResult> toolCalls,
             TokenUsage usage,
             int iteration,
             LlmResponse lastResponse,
@@ -47,7 +50,7 @@ public final class ToolLoop {
      * Paired result of executing tool calls - the message results to append
      * to the conversation, plus the records for tracing.
      */
-    private record ToolExecutionResult(List<ChatMessage.ToolResult> messages, List<ToolCallRecord> records) {
+    private record ToolExecutionResult(List<ChatMessage.ToolResult> messages, List<ToolCallResult> results) {
     }
 
     /**
@@ -58,7 +61,7 @@ public final class ToolLoop {
      * 4. Produce new state
      * 5. Repeat until LLM returns content without tool calls, or max iterations
      */
-    public static ToolLoopResult execute(
+    public ToolLoopResult execute(
             LlmClient client,
             LlmRequest initialRequest,
             ToolRegistry tools,
@@ -77,7 +80,7 @@ public final class ToolLoop {
      * Single step of the tool loop - function from state to state.
      * Side-effects are confined to LLM calls and tool execution.
      */
-    private static LoopState step(
+    private LoopState step(
             LlmClient client,
             LlmRequest template,
             ToolRegistry tools,
@@ -106,7 +109,7 @@ public final class ToolLoop {
                             .map(r -> (ChatMessage) r)
                             .toList());
 
-            var newToolCalls = concat(state.toolCalls(), executionResult.records());
+            var newToolCalls = concat(state.toolCalls(), executionResult.results());
 
             return new LoopState(newMessages, newToolCalls, newUsage,
                     state.iteration() + 1, response, false, null);
@@ -115,7 +118,7 @@ public final class ToolLoop {
         }
     }
 
-    private static ToolLoopResult toResult(LoopState state, int maxIterations) {
+    private ToolLoopResult toResult(LoopState state, int maxIterations) {
         if (state.interruptReason() != null) {
             return new ToolLoopResult.Interrupted(
                     state.usage(), state.iteration(), state.toolCalls(), state.interruptReason());
@@ -129,57 +132,32 @@ public final class ToolLoop {
                 state.lastResponse(), state.usage(), state.iteration(), state.toolCalls());
     }
 
-    private static ToolExecutionResult executeToolCalls(
+    private ToolExecutionResult executeToolCalls(
             List<ToolCallRequest> toolCallRequests,
             ToolRegistry tools) {
         if (toolCallRequests.size() == 1) {
             var tc = toolCallRequests.getFirst();
-            var result = executeSingleTool(tc, tools);
-            return new ToolExecutionResult(List.of(result.message()), List.of(result.record()));
+            var result = executor.execute(tc, tools);
+            return new ToolExecutionResult(List.of(result.toToolResultMessage()), List.of(result));
         }
 
         try (var scope = StructuredTaskScope.open()) {
             var subtasks = toolCallRequests.stream()
-                    .map(tc -> scope.fork(() -> executeSingleTool(tc, tools)))
+                    .map(tc -> scope.fork(() -> executor.execute(tc, tools)))
                     .toList();
             scope.join();
 
             var messages = subtasks.stream()
-                    .map(s -> s.get().message())
+                    .map(s -> s.get().toToolResultMessage())
                     .toList();
-            var records = subtasks.stream()
-                    .map(s -> s.get().record())
+            var results = subtasks.stream()
+                    .map(s -> s.get())
                     .toList();
-            return new ToolExecutionResult(messages, records);
+            return new ToolExecutionResult(messages, results);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ToolExecutionInterruptedException("Tool execution interrupted", e);
         }
-    }
-
-    private record SingleToolResult(ChatMessage.ToolResult message, ToolCallRecord record) {
-    }
-
-    private static SingleToolResult executeSingleTool(ToolCallRequest tc, ToolRegistry tools) {
-        var start = Instant.now();
-        var tool = tools.findByName(tc.functionName());
-        String resultContent;
-        if (tool.isPresent()) {
-            LOG.debug("Executing tool '{}' with args: {}", tc.functionName(), tc.argumentsJson());
-            try {
-                resultContent = tool.get().executor().execute(tc.argumentsJson());
-            } catch (Exception e) {
-                LOG.warn("Tool '{}' failed: {}", tc.functionName(), e.getMessage());
-                resultContent = "Error: " + e.getMessage();
-            }
-        } else {
-            LOG.warn("Tool '{}' not found in registry", tc.functionName());
-            resultContent = "Error: tool '" + tc.functionName() + "' not found";
-        }
-        var duration = Duration.between(start, Instant.now());
-        var record = new ToolCallRecord(tc.functionName(), tc.argumentsJson(), resultContent, duration);
-        var message = new ChatMessage.ToolResult(tc.id(), resultContent);
-        return new SingleToolResult(message, record);
     }
 
     @SafeVarargs
@@ -197,8 +175,5 @@ public final class ToolLoop {
         ToolExecutionInterruptedException(String message, Throwable cause) {
             super(message, cause);
         }
-    }
-
-    private ToolLoop() {
     }
 }

@@ -2,6 +2,7 @@ package com.loopy.runtime;
 
 import com.loopy.core.TokenUsage;
 import com.loopy.core.llm.LlmResponse;
+import com.loopy.core.tool.ToolCallResult;
 
 import java.util.List;
 
@@ -34,7 +35,7 @@ public sealed interface ToolLoopResult {
      *
      * @return the list of tool call records
      */
-    List<ToolCallRecord> toolCalls();
+    List<ToolCallResult> toolCalls();
 
     /**
      * The LLM produced a final text response (no further tool calls).
@@ -48,7 +49,7 @@ public sealed interface ToolLoopResult {
                     LlmResponse finalResponse,
                     TokenUsage accumulatedUsage,
                     int iterations,
-                    List<ToolCallRecord> toolCalls) implements ToolLoopResult {
+                    List<ToolCallResult> toolCalls) implements ToolLoopResult {
     }
 
     /**
@@ -62,7 +63,7 @@ public sealed interface ToolLoopResult {
     record Interrupted(
                     TokenUsage accumulatedUsage,
                     int iterations,
-                    List<ToolCallRecord> toolCalls,
+                    List<ToolCallResult> toolCalls,
                     String reason) implements ToolLoopResult {
     }
 
@@ -78,6 +79,6 @@ public sealed interface ToolLoopResult {
                     LlmResponse lastResponse,
                     TokenUsage accumulatedUsage,
                     int iterations,
-                    List<ToolCallRecord> toolCalls) implements ToolLoopResult {
+                    List<ToolCallResult> toolCalls) implements ToolLoopResult {
     }
 }
