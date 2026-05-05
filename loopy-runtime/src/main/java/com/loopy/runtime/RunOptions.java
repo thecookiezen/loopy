@@ -48,4 +48,15 @@ public record RunOptions(
                         new SupervisionStrategy.Replan(),
                         List.of(LifecycleListener.logging()));
     }
+
+    public static RunOptions debug() {
+        return new RunOptions(
+                        20,
+                        10,
+                        Duration.ofMinutes(5),
+                        List.of(PricingModel.GPT_5_4, PricingModel.GPT_5_4_MINI,
+                                        PricingModel.GPT_5_4_NANO),
+                        new SupervisionStrategy.Replan(),
+                        List.of(LifecycleListener.logging().andThen(LifecycleListener.debug())));
+    }
 }

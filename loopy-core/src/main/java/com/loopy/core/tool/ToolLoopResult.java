@@ -1,8 +1,7 @@
-package com.loopy.runtime;
+package com.loopy.core.tool;
 
 import com.loopy.core.TokenUsage;
 import com.loopy.core.llm.LlmResponse;
-import com.loopy.core.tool.ToolCallResult;
 
 import java.util.List;
 

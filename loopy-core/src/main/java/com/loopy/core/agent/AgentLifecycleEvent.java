@@ -9,17 +9,18 @@ import com.loopy.core.planning.Beliefs;
 import java.time.Duration;
 import java.time.Instant;
 
-/**
- * Events emitted during agent execution, allowing observation and integration
- * with external systems.
- *
- * Agents publish these events as they start, execute actions, replan, change
- * behavior, and finally complete or fail. Listeners can subscribe to these
- * events to monitor progress, implement human-in-the-loop handoffs, record
- * execution traces, or trigger side effects.
- */
-public sealed interface AgentLifecycleEvent {
-        Instant timestamp();
+public sealed interface AgentLifecycleEvent
+        permits AgentLifecycleEvent.Started,
+        AgentLifecycleEvent.ActionStarted,
+        AgentLifecycleEvent.ActionCompleted,
+        AgentLifecycleEvent.ActionFailed,
+        AgentLifecycleEvent.Replanned,
+        AgentLifecycleEvent.BehaviorChanged,
+        AgentLifecycleEvent.ProcessCompleted,
+        AgentLifecycleEvent.ProcessFailed,
+        DebugEvent {
+
+    Instant timestamp();
 
         /**
          * Emitted when an agent process starts.
@@ -47,8 +48,8 @@ public sealed interface AgentLifecycleEvent {
          */
         record ActionFailed(ActionDefinition action, Exception cause,
                         SupervisionStrategy appliedStrategy, Instant timestamp)
-                        implements AgentLifecycleEvent {
-        }
+            implements AgentLifecycleEvent {
+    }
 
         /**
          * Emitted when the agent replans its strategy toward the goal.

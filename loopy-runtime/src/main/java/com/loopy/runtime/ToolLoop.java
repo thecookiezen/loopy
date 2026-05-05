@@ -1,30 +1,35 @@
 package com.loopy.runtime;
 
 import com.loopy.core.TokenUsage;
+import com.loopy.core.agent.LifecycleListener;
+import com.loopy.core.agent.DebugEvent;
 import com.loopy.core.tool.DefaultToolCallExecutor;
 import com.loopy.core.tool.ToolCallExecutor;
 import com.loopy.core.tool.ToolCallResult;
+import com.loopy.core.tool.ToolLoopResult;
 import com.loopy.core.tool.ToolRegistry;
 import com.loopy.core.llm.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.stream.Stream;
 
-/**
- * The tool-calling loop.
- */
 public final class ToolLoop {
 
     private final ToolCallExecutor executor;
+    private final LifecycleListener listener;
 
     public ToolLoop() {
         this.executor = DefaultToolCallExecutor.INSTANCE;
+        this.listener = LifecycleListener.noop();
     }
 
-    /**
-     * Snapshot of one iteration of the tool loop.
-     */
+    public ToolLoop(ToolCallExecutor executor, LifecycleListener listener) {
+        this.executor = executor;
+        this.listener = listener;
+    }
+
     private record LoopState(
             List<ChatMessage> messages,
             List<ToolCallResult> toolCalls,
@@ -73,7 +78,10 @@ public final class ToolLoop {
                 .reduce((first, second) -> second)
                 .orElse(LoopState.initial(initialRequest.messages()));
 
-        return toResult(terminalState, maxIterations);
+        var result = toResult(terminalState, maxIterations);
+        listener.onEvent(new DebugEvent.ToolLoopCompleted(
+                result, terminalState.iteration(), terminalState.usage(), Instant.now()));
+        return result;
     }
 
     /**
@@ -89,6 +97,9 @@ public final class ToolLoop {
         if (state.iteration() >= maxIterations) {
             return state.withTerminal(state.lastResponse(), state.usage());
         }
+
+        listener.onEvent(new DebugEvent.ToolLoopIteration(
+                state.iteration() + 1, maxIterations, state.messages(), Instant.now()));
 
         var request = template.withMessages(state.messages());
         var response = client.chat(request);

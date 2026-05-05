@@ -3,31 +3,13 @@ package com.loopy.core.agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Observes {@link AgentLifecycleEvent} instances emitted during agent execution.
- *
- * Implementations can monitor agent progress, implement human-in-the-loop
- * handoffs, record execution traces, or trigger side effects. Multiple listeners
- * can be composed using {@link #andThen(LifecycleListener)}.
- *
- * @see AgentLifecycleEvent
- */
 @FunctionalInterface
 public interface LifecycleListener {
 
-    /**
-     * Handle a lifecycle event emitted during agent execution.
-     *
-     * @param event the event to process
-     */
+    static final Logger log = LoggerFactory.getLogger(LifecycleListener.class);
+
     void onEvent(AgentLifecycleEvent event);
 
-    /**
-     * Compose this listener with another, executing this one first.
-     *
-     * @param other the listener to chain after this one
-     * @return a composite listener that invokes both in order
-     */
     default LifecycleListener andThen(LifecycleListener other) {
         return event -> {
             this.onEvent(event);
@@ -35,13 +17,7 @@ public interface LifecycleListener {
         };
     }
 
-    /**
-     * Returns a listener that logs every lifecycle event.
-     *
-     * @return a logging listener
-     */
     static LifecycleListener logging() {
-        Logger log = LoggerFactory.getLogger(LifecycleListener.class);
         return event -> {
             switch (event) {
                 case AgentLifecycleEvent.Started e ->
@@ -64,18 +40,67 @@ public interface LifecycleListener {
                     log.info("Agent completed with result: {}", e.result());
                 case AgentLifecycleEvent.ProcessFailed e ->
                     log.error("Agent failed", e.cause());
+                default -> {}
             }
-            ;
         };
     }
 
-    /**
-     * Returns a listener that silently discards all events.
-     *
-     * @return a no-op listener
-     */
-    static LifecycleListener noop() {
+    static LifecycleListener debug() {
         return event -> {
+            switch (event) {
+                case DebugEvent.LlmRequestSent e ->
+                    log.debug("[LLM] Request sent to model '{}', messages: {}",
+                            e.request().model(), e.request().messages().size());
+                case DebugEvent.LlmResponseReceived e ->
+                    log.debug("[LLM] Response from '{}', tokens: {}, duration: {}ms",
+                            e.model(), e.response().usage().totalTokens(),
+                            e.duration().toMillis());
+                case DebugEvent.LlmObjectRequestSent e ->
+                    log.debug("[LLM] Object request sent, outputType: {}, model: '{}'",
+                            e.outputType().getSimpleName(), e.request().model());
+                case DebugEvent.LlmObjectResultReceived e ->
+                    log.debug("[LLM] Object result received, outputType: {}, tokens: {}, duration: {}ms",
+                            e.outputType().getSimpleName(), e.result().usage().totalTokens(),
+                            e.duration().toMillis());
+                case DebugEvent.ToolCallExecuted e ->
+                    log.debug("[TOOL] '{}' executed, duration: {}ms, result: {}",
+                            e.request().functionName(), e.duration().toMillis(),
+                            truncate(e.result().resultContent(), 500));
+                case DebugEvent.ToolLoopIteration e ->
+                    log.debug("[TOOL LOOP] Iteration {}/{}, messages: {}",
+                            e.iteration(), e.maxIterations(), e.messages().size());
+                case DebugEvent.ToolLoopCompleted e ->
+                    log.debug("[TOOL LOOP] Completed, iterations: {}, tokens: {}",
+                            e.totalIterations(), e.accumulatedUsage().totalTokens());
+                case DebugEvent.PlanningStarted e ->
+                    log.debug("[PLAN] Planning started, actions: {}, goal: '{}'",
+                            e.actions().size(), e.goal().name());
+                case DebugEvent.PlanningNodeExpanded e ->
+                    log.debug("[PLAN] Node expanded, action: '{}', g: {}, h: {}",
+                            e.actionApplied().name(), e.gScore(), e.hScore());
+                case DebugEvent.PlanningCompleted e ->
+                    log.debug("[PLAN] Planning completed, plan steps: {}, iterations: {}",
+                            e.plan().stepCount(), e.iterations());
+                case DebugEvent.PlanningFailed e ->
+                    log.debug("[PLAN] Planning failed after {} iterations", e.iterations());
+                case DebugEvent.OodaCycleStarted e ->
+                    log.debug("[OODA] Cycle {}, mailbox: {}, beliefs: {}",
+                            e.stepNumber(), e.mailbox().messages().size(), e.beliefs().satisfiedConditions().size());
+                case DebugEvent.ActionInputResolved e ->
+                    log.debug("[OODA] Action '{}' inputs resolved, count: {}",
+                            e.action().name(), e.inputs().size());
+                default -> {}
+            }
         };
+    }
+
+    static LifecycleListener noop() {
+        return event -> {};
+    }
+
+    static String truncate(String text, int maxLength) {
+        if (text == null) return "null";
+        if (text.length() <= maxLength) return text;
+        return text.substring(0, maxLength) + "...[truncated]";
     }
 }
