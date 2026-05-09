@@ -3,13 +3,33 @@ package com.loopy.core.agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Observes {@link AgentLifecycleEvent} instances emitted during agent execution.
+ *
+ * Implementations can monitor agent progress, implement human-in-the-loop
+ * handoffs, record execution traces, or trigger side effects. Multiple listeners
+ * can be composed using {@link #andThen(LifecycleListener)}.
+ *
+ * @see AgentLifecycleEvent
+ */
 @FunctionalInterface
 public interface LifecycleListener {
 
     static final Logger log = LoggerFactory.getLogger(LifecycleListener.class);
 
+    /**
+     * Handle a lifecycle event emitted during agent execution.
+     *
+     * @param event the event to process
+     */
     void onEvent(AgentLifecycleEvent event);
 
+    /**
+     * Compose this listener with another, executing this one first.
+     *
+     * @param other the listener to chain after this one
+     * @return a composite listener that invokes both in order
+     */
     default LifecycleListener andThen(LifecycleListener other) {
         return event -> {
             this.onEvent(event);
@@ -17,6 +37,11 @@ public interface LifecycleListener {
         };
     }
 
+    /**
+     * Returns a listener that logs every lifecycle event.
+     *
+     * @return a logging listener
+     */
     static LifecycleListener logging() {
         return event -> {
             switch (event) {
@@ -94,6 +119,11 @@ public interface LifecycleListener {
         };
     }
 
+    /**
+     * Returns a listener that silently discards all events.
+     *
+     * @return a no-op listener
+     */
     static LifecycleListener noop() {
         return event -> {};
     }

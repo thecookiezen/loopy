@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.stream.Stream;
 
+/**
+ * The tool-calling loop.
+ */
 public final class ToolLoop {
 
     private final ToolCallExecutor executor;
@@ -30,6 +33,9 @@ public final class ToolLoop {
         this.listener = listener;
     }
 
+    /**
+     * Snapshot of one iteration of the tool loop.
+     */
     private record LoopState(
             List<ChatMessage> messages,
             List<ToolCallResult> toolCalls,
