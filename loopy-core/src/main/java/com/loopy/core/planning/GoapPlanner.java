@@ -2,11 +2,14 @@ package com.loopy.core.planning;
 
 import com.loopy.core.action.ActionDefinition;
 import com.loopy.core.agent.GoalDefinition;
+import com.loopy.core.agent.LifecycleListener;
 import com.loopy.core.condition.Effect;
 import com.loopy.core.condition.Precondition;
+import com.loopy.core.agent.DebugEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -32,13 +35,20 @@ public final class GoapPlanner implements Planner {
 
     @Override
     public Optional<Plan> plan(Beliefs current, Set<ActionDefinition> actions, GoalDefinition goal) {
+        return plan(current, actions, goal, LifecycleListener.noop());
+    }
+
+    @Override
+    public Optional<Plan> plan(Beliefs current, Set<ActionDefinition> actions, GoalDefinition goal, LifecycleListener listener) {
         if (current.satisfies(goal.preconditions())) {
             LOG.debug("Goal '{}' already satisfied in current state", goal.name());
             return Optional.of(new Plan(List.of(), goal));
         }
 
+        listener.onEvent(new DebugEvent.PlanningStarted(current, actions, goal, Instant.now()));
         if (!isReachable(current, actions, goal)) {
             LOG.debug("Goal '{}' is unreachable - no action produces required effects", goal.name());
+            listener.onEvent(new DebugEvent.PlanningFailed(current, 0, Instant.now()));
             return Optional.empty();
         }
 
@@ -66,7 +76,9 @@ public final class GoapPlanner implements Planner {
                 var path = reconstructPath(node.state, cameFrom, parentState, current);
                 LOG.debug("Plan found for goal '{}' in {} iterations: {} actions",
                         goal.name(), iterations, path.size());
-                return Optional.of(new Plan(path, goal));
+                var plan = new Plan(path, goal);
+                listener.onEvent(new DebugEvent.PlanningCompleted(plan, iterations, Instant.now()));
+                return Optional.of(plan);
             }
 
             // Skip if we already found a cheaper path to this state
@@ -91,12 +103,16 @@ public final class GoapPlanner implements Planner {
                     bestCosts.put(nextState, tentativeCost);
                     cameFrom.put(nextState, action);
                     parentState.put(nextState, node.state);
-                    openQueue.add(new SearchNode(nextState, tentativeCost, heuristic(nextState, goal, minActionCost)));
+                    var newNode = new SearchNode(nextState, tentativeCost, heuristic(nextState, goal, minActionCost));
+                    openQueue.add(newNode);
+                    listener.onEvent(new DebugEvent.PlanningNodeExpanded(
+                            nextState, tentativeCost, newNode.hScore(), action, Instant.now()));
                 }
             }
         }
 
         LOG.debug("No plan found for goal '{}' after {} iterations", goal.name(), iterations);
+        listener.onEvent(new DebugEvent.PlanningFailed(current, iterations, Instant.now()));
         return Optional.empty();
     }
 
